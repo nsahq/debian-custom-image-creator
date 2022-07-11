@@ -161,7 +161,7 @@ main() {
     FIRMWARE_LINK="http://cdimage.debian.org/cdimage/unofficial/non-free/firmware/${DEBIAN_RELEASE}/current"
 
     run_command 'cd "${DIR}"' \
-        "Set script directory"
+        "Set script directory to ${DIR}"
 
     # Ensure base directories exists
     run_command 'mkdir -p "${PAYLOAD_DIR}" "${IMAGE_DIR}" "${CHECKSUM_DIR}" "${PARTS_DIR}" "${OUT_DIR}"' \
@@ -198,7 +198,7 @@ main() {
 
     if [ "${PAYLOAD}" != "" ]; then
         run_command 'cp -Raf "${PAYLOAD_DIR}/${PAYLOAD}/." "${PARTS_DIR}/${DEBIAN_IMAGE}/"' \
-            "Copying payload from ${PAYLOAD} to image directory"
+            "Copying payload from ${PAYLOAD_DIR}/${PAYLOAD} to image directory"
     fi
 
     # Create new initrd.gz
@@ -231,7 +231,7 @@ main() {
         -isohybrid-mbr "${PARTS_DIR}/isohdpfx.bin" \
         -o "${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso" "${PARTS_DIR}/${DEBIAN_IMAGE}" \
         &>/dev/null' \
-        "Creating new Debian ISO"
+        "Creating new Debian ISO in ${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso"
 
     # Clean up
     clean_parts
