@@ -13,6 +13,7 @@ unpacked image is then repackaged and placed into the 'out' folder.
 
 ## Usage
 
+```bash
 Usage: reimager.sh [options]
 
     -a STR    Architecture. <arm64|amd64> Default: amd64
@@ -22,6 +23,7 @@ Usage: reimager.sh [options]
     -p STR    Payload directory name to add to the image.
     -r STR    Choose release. <stable|testing> Default: stable
     -v        Show version and exit.
+```
 
 ## Creating a bootable USB
 

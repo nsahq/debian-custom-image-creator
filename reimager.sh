@@ -13,7 +13,7 @@ set -o nounset
 VERSION="1.1.0"
 
 DIR=$(
-    cd "$(dirname "$0")"
+    cd "$(dirname "$0")" || exit
     pwd -P
 )
 CHECKSUM_DIR="cache"
@@ -23,7 +23,7 @@ PARTS_DIR="parts"
 OUT_DIR="out"
 
 display_help() {
-    echo "Usage: $(basename ${BASH_SOURCE[0]}) [options]"
+    echo "Usage: $(basename "${BASH_SOURCE[0]}") [options]"
     echo ""
     echo "    -a STR    Architecture. <arm64|amd64> Default: amd64"
     echo "    -h        Print this help message."
@@ -36,7 +36,7 @@ display_help() {
 }
 
 display_version() {
-    echo "$(basename ${BASH_SOURCE[0]}) v${VERSION}"
+    echo "$(basename "${BASH_SOURCE[0]}") v${VERSION}"
     echo "Copyright (C) 2022 Jonas Werme, NSAHQ"
     echo "MIT License <https://github.com/nsahq/debian-custom-image-creator/blob/main/LICENSE>"
     echo "This is free software: you are free to change and redistribute it."
@@ -78,9 +78,11 @@ validate_checksum() {
 validate_download() {
     # Get checksum values
     local filter="${3}"
-    local download_sha=$(sha256sum "${1}" | awk '{print $1}')
-    local true_download_sha=$(grep "${filter}" "${2}" | awk '{print $1}')
+    local download_sha
+    local true_download_sha
     local desc="${4:-file}"
+    download_sha=$(sha256sum "${1}" | awk '{print $1}')
+    true_download_sha=$(grep "${filter}" "${2}" | awk '{print $1}')
 
     # Validate checksum
     echo -n "Validating ${desc} checksum... "
@@ -142,13 +144,13 @@ run_command() {
 }
 
 main() {
-    [ $(which xorriso) ] || {
+    [ "$(which xorriso)" ] || {
         echo "xorriso required, please install and try again"
         exit 1
     }
 
     # Set the correct base image
-    if [ ${DEBIAN_RELEASE} = "stable" ]; then
+    if [ "${DEBIAN_RELEASE}" = "stable" ]; then
         DEBIAN_LINK="http://cdimage.debian.org/debian-cd/current/${ARCH}/iso-cd"
         [[ $(curl -s "${DEBIAN_LINK}/") =~ debian-([[:digit:]]+.[[:digit:]]+.[[:digit:]]+)-${ARCH}-netinst ]] && DEBIAN_VERSION=${BASH_REMATCH[1]}
     else
