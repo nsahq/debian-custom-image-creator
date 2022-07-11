@@ -4,6 +4,7 @@
 /checksums
 /debian
 /payload
+/cache
 # Backups
 *.bak
 # Nano

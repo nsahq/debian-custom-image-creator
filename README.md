@@ -27,14 +27,13 @@ Usage: reimager.sh [options]
 The script will create following
 directories locally:
 
-* checksums - Cache of Debian checksums
-* debian - Cache of Debian images
+* cache - Cache of Debian images and checksum files
 * out - The directory where your resulting image will reside
-* parts - Directory used by the script to assemble the image
+* parts - Temporary directory used by the script to assemble the image
 * payload - Where your custom payloads should reside in a sub directory
 
 Payloads can consist of anything you wish to include in the image, e.g. preseed files,
 custom firmwares, grub configs etc. etc.
 
 Debian images and firmwares are cached locally. To force the script to fetch
-new images, remove the debian directory (or image therein) and/or the checksum directory.
+new images, remove the cache directory (or image/checksums therein).

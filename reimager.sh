@@ -16,9 +16,9 @@ DIR=$(
     cd "$(dirname "$0")"
     pwd -P
 )
-CHECKSUM_DIR="checksums"
+CHECKSUM_DIR="cache"
 PAYLOAD_DIR="payload"
-IMAGE_DIR="debian"
+IMAGE_DIR="cache"
 PARTS_DIR="parts"
 OUT_DIR="out"
 
@@ -92,7 +92,7 @@ clean_parts() {
     if (($(ls "${PARTS_DIR}" | wc -l))); then
         echo -n "Removing parts... "
         (chmod -R +w "${PARTS_DIR}"/*) || (echo "failed" && exit 3)
-        (rm -rf "${PARTS_DIR:?}"/* && echo "ok") || (echo "failed" && exit 3)
+        (rm -rf "${PARTS_DIR:?}" && echo "ok") || (echo "failed" && exit 3)
     fi
 }
 
