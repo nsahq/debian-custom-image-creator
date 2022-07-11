@@ -16,9 +16,10 @@ unpacked image is then repackaged and placed into the 'out' folder.
 Usage: reimager.sh [options]
 
     -a STR    Architecture. <arm64|amd64> Default: amd64
+    -h        Print this help message.
     -l STR    ISO volume label.
     -n STR    Append string to ISO name (before .iso).
-    -h        Print this help message.
+    -p STR    Payload directory name to add to the image.
     -r STR    Choose release. <stable|testing> Default: stable
     -v        Show version and exit.
 
