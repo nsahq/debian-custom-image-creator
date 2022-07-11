@@ -1,0 +1,25 @@
+# ISO builds
+/parts
+/out
+/checksums
+/debian
+/payload
+# Backups
+*.bak
+# Nano
+*.save
+# Vim
+*~
+.*.sw?
+# Mac OS X
+.DS_Store
+# PyCharm
+.idea
+# IntelliJ IDEA
+*.iml
+# Eclipse/PyDev
+.project
+.pydevproject
+# Sublime
+*.sublime-project
+*.sublime-workspace
