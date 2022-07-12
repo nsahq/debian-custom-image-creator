@@ -95,6 +95,7 @@ clean_parts() {
     if (($(ls "${PARTS_DIR}" | wc -l))); then
         echo -n "Removing parts... "
         (chmod -R +w "${PARTS_DIR}"/*) || (echo "failed" && exit 3)
+        (rm -rf "${CHECKSUM_DIR}"/*SHA256SUMS) || (echo "failed" && exit 3)
         (rm -rf "${PARTS_DIR:?}" && echo "ok") || (echo "failed" && exit 3)
     fi
 }
@@ -188,10 +189,6 @@ main() {
 
     get_source "${firmware_checksum_remote}" "${firmware_checksum_dest}" "${firmware_remote}" "${firmware_dest}" "firmware.cpio.gz" "firmware"
 
-    # Create bootsector binary for hybrid ISO
-    run_command 'dd if="${image_dest}" of="${PARTS_DIR}/isohdpfx.bin" bs=512 count=1 &>/dev/null' \
-        "Create isohdpfx.bin from ISO (512 first bytes)"
-
     # Unpack ISO
     run_command 'xorriso -osirrox on -indev "${IMAGE_DIR}/${DEBIAN_IMAGE}.iso" -extract / "${PARTS_DIR}/${DEBIAN_IMAGE}" &>/dev/null' \
         "Unpacking Debian ISO"
@@ -205,36 +202,60 @@ main() {
     fi
 
     # Create new initrd.gz
-    run_command 'cp "${PARTS_DIR}/${DEBIAN_IMAGE}/install.amd/initrd.gz" "${PARTS_DIR}/initrd.gz" &>/dev/null' \
+    run_command 'cp "${PARTS_DIR}/${DEBIAN_IMAGE}/install.${ARCH_INITRD_LOC}/initrd.gz" "${PARTS_DIR}/initrd.gz" &>/dev/null' \
         "Copying initrd.gz to ${PARTS_DIR}"
 
-    run_command 'cat "${PARTS_DIR}/initrd.gz" "${IMAGE_DIR}/firmware.cpio.gz" >"${PARTS_DIR}/${DEBIAN_IMAGE}/install.amd/initrd.gz"' \
+    run_command 'cat "${PARTS_DIR}/initrd.gz" "${IMAGE_DIR}/firmware.cpio.gz" >"${PARTS_DIR}/${DEBIAN_IMAGE}/install.${ARCH_INITRD_LOC}/initrd.gz"' \
         "Appending firmware to initrd.gz"
 
     # Update checksums
     run_command 'cd "${PARTS_DIR}/${DEBIAN_IMAGE}" && $(md5sum $(find -type f) >md5sum.txt) && cd "${DIR}"' \
         "Updating md5checksum file"
 
-    # Create the image
     run_command 'chmod -R u-w "${PARTS_DIR}/${DEBIAN_IMAGE}" &>/dev/null' \
         "Revoking write permission on image directory"
 
+    # Create the image
     if [ -z "${ISO_LABEL}" ]; then
         ISO_LABEL=$(cat "${PARTS_DIR}/${DEBIAN_IMAGE}/.disk/info" | awk '{print $1, $3, $7}')
     fi
 
-    run_command 'xorriso -as mkisofs -r -J \
-        -V "${ISO_LABEL}" \
-        -b isolinux/isolinux.bin \
-        -c isolinux/boot.cat \
-        -no-emul-boot \
-        -partition_offset 16 \
-        -boot-load-size 4 \
-        -boot-info-table \
-        -isohybrid-mbr "${PARTS_DIR}/isohdpfx.bin" \
-        -o "${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso" "${PARTS_DIR}/${DEBIAN_IMAGE}" \
-        &>/dev/null' \
-        "Creating new Debian ISO in ${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso"
+    if [ ${ARCH} = "amd64" ]; then
+        # Create bootsector binary for hybrid ISO
+        run_command 'dd if="${image_dest}" of="${PARTS_DIR}/isohdpfx.bin" bs=512 count=1 &>/dev/null' \
+            "Create isohdpfx.bin from ISO (512 first bytes)"
+
+        run_command 'xorriso -as mkisofs -r -J \
+            -V "${ISO_LABEL}" \
+            -b /isolinux/isolinux.bin \
+            -c isolinux/boot.cat \
+            -no-emul-boot \
+            -partition_offset 16 \
+            -boot-load-size 4 \
+            -boot-info-table \
+            -isohybrid-mbr "${PARTS_DIR}/isohdpfx.bin" \
+            -o "${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso" "${PARTS_DIR}/${DEBIAN_IMAGE}" \
+            &>/dev/null' \
+            "Creating new Debian ISO in ${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso"
+    elif [ ${ARCH} = "arm64" ]; then
+
+        P2START="$(/sbin/fdisk -l "${image_dest}" | grep EFI | awk '{ print $2 }')" || exit 1
+        P2SIZE="$(/sbin/fdisk -l "${image_dest}" | grep EFI | awk '{ print $4 }')" || exit 1
+
+        run_command 'dd if="${image_dest}" of="${PARTS_DIR}/efi.img" bs=512 skip=${P2START} count=${P2SIZE} &>/dev/null' \
+            "Create efi.img from ISO (block start = ${P2START} and size = ${P2SIZE})"
+
+        run_command 'xorriso -as mkisofs -r -J \
+            -V "${ISO_LABEL}" \
+            -no-emul-boot \
+            -J -joliet-long -cache-inodes \
+            -e boot/grub/efi.img \
+            -append_partition 2 0xef "${PARTS_DIR}/efi.img" \
+            -partition_cyl_align all \
+            -o "${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso" "${PARTS_DIR}/${DEBIAN_IMAGE}" \
+            &>/dev/null' \
+            "Creating new Debian ISO in ${OUT_DIR}/${DEBIAN_IMAGE}${ISO_SUFFIX}.iso"
+    fi
 
     # Clean up
     clean_parts
@@ -246,6 +267,7 @@ ISO_SUFFIX=""
 DEBIAN_RELEASE="stable"
 ARCH="amd64"
 PAYLOAD=""
+ARCH_INITRD_LOC="amd"
 
 # Parse options
 OPTIND=1
@@ -257,6 +279,7 @@ while getopts ":l:a:n:p:r:hv" opt; do
             echo "Invalid architecture specified. Please choose 'arm64' or 'amd64'"
             exit 1
         fi
+        [[ ${ARCH} == "arm64" ]] && ARCH_INITRD_LOC="a64"
         ;;
 
     l)
